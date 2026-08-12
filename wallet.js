@@ -39,6 +39,7 @@ async function main() {
   await tx.wait();
 
   console.log("Transaction confirmed!");
+  console.log("Current balance:", ethers.formatEther(await wallet.provider.getBalance(wallet.address)), "ETH");
 }
 
 main().catch(console.error);
