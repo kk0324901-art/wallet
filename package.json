@@ -1,0 +1,12 @@
+{
+  "name": "wallet",
+  "version": "1.0.0",
+  "type": "commonjs",
+  "main": "wallet.js",
+  "scripts": {
+    "start": "node wallet.js"
+  },
+  "dependencies": {
+    "ethers": "^6.17.0"
+  }
+}
