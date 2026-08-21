@@ -262,16 +262,14 @@
   </div>
 </div>
 
+<!-- Ethers.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.11.1/ethers.umd.min.js"></script>
+<!-- Client-side Core -->
+<script src="core.js"></script>
+
 <script>
 /* ── Helpers ─────────────────────────────────────────────────────────────── */
 const el  = id => document.getElementById(id);
-const API = async (path, body) => {
-  const opts = body
-    ? { method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify(body) }
-    : { method:'GET' };
-  const r = await fetch(path, opts);
-  return r.json().catch(() => ({ success:false, error:'Server error' }));
-};
 
 function showAlert(id, msg, type='error') {
   const a = el(id);
@@ -331,18 +329,21 @@ async function doCreate() {
   if (pw !== pw2)  return showAlert('alert','Passwords do not match');
 
   setBtnLoading('btn-create', true);
-  const res = await API('/create-wallet', { password: pw });
-  setBtnLoading('btn-create', false, 'Create New Wallet');
+  try {
+    const res = await Core.createWallet(pw);
+    
+    // Store address for redirect
+    sessionStorage.setItem('g5_address', res.address);
+    sessionStorage.setItem('g5_balance', '0.0');
 
-  if (!res.success) return showAlert('alert', res.error || 'Failed to create wallet');
-
-  // Store address for redirect
-  sessionStorage.setItem('g5_address', res.address);
-  sessionStorage.setItem('g5_balance', res.balance || '0');
-
-  // Show mnemonic
-  renderMnemonic(res.mnemonic);
-  showAlert('alert','Wallet created successfully!','success');
+    // Show mnemonic
+    renderMnemonic(res.mnemonic);
+    showAlert('alert','Wallet created successfully!','success');
+  } catch (err) {
+    showAlert('alert', err.message || 'Failed to create wallet');
+  } finally {
+    setBtnLoading('btn-create', false, 'Create New Wallet');
+  }
 }
 
 function renderMnemonic(phrase) {
@@ -365,15 +366,18 @@ async function doImport() {
   if (!pw) return showAlert('alert','Enter a password');
 
   setBtnLoading('btn-import', true);
-  const res = await API('/import-wallet', { mnemonic: mn, password: pw });
-  setBtnLoading('btn-import', false, 'Import Wallet');
-
-  if (!res.success) return showAlert('alert', res.error || 'Import failed');
-
-  sessionStorage.setItem('g5_address', res.address);
-  sessionStorage.setItem('g5_balance', res.balance || '0');
-  showAlert('alert','Wallet imported! Redirecting…','success');
-  setTimeout(gotoDashboard, 1200);
+  try {
+    const res = await Core.importWallet(mn, pw);
+    
+    sessionStorage.setItem('g5_address', res.address);
+    sessionStorage.setItem('g5_balance', '0.0');
+    showAlert('alert','Wallet imported! Redirecting…','success');
+    setTimeout(gotoDashboard, 1200);
+  } catch (err) {
+    showAlert('alert', err.message || 'Import failed');
+  } finally {
+    setBtnLoading('btn-import', false, 'Import Wallet');
+  }
 }
 
 /* ── Login / Unlock ──────────────────────────────────────────────────────── */
@@ -391,14 +395,17 @@ async function doLogin() {
   if (!pw) return showAlert('login-alert','Enter your password');
 
   setBtnLoading('btn-login', true);
-  const res = await API('/login', { password: pw });
-  setBtnLoading('btn-login', false, 'Unlock');
-
-  if (!res.success) return showAlert('login-alert', res.error || 'Login failed');
-
-  sessionStorage.setItem('g5_address', res.address);
-  sessionStorage.setItem('g5_balance', res.balance || '0');
-  gotoDashboard();
+  try {
+    const res = await Core.login(pw);
+    
+    sessionStorage.setItem('g5_address', res.address);
+    sessionStorage.setItem('g5_balance', '0.0');
+    gotoDashboard();
+  } catch (err) {
+    showAlert('login-alert', err.message || 'Login failed');
+  } finally {
+    setBtnLoading('btn-login', false, 'Unlock');
+  }
 }
 
 /* ── Navigate to dashboard ───────────────────────────────────────────────── */
@@ -408,8 +415,7 @@ function gotoDashboard() {
 
 /* ── Auto-check existing wallet on load ─────────────────────────────────── */
 (async () => {
-  const meta = await API('/wallet-meta');
-  if (meta && meta.address) {
+  if (Core.hasWallet()) {
     // Wallet file exists — show unlock prompt
     showLoginModal();
   }

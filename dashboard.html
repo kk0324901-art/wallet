@@ -697,19 +697,14 @@
      SCRIPTS
 ══════════════════════════════════════════════════════════════ -->
 <script>
+<!-- Ethers.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.11.1/ethers.umd.min.js"></script>
+<!-- Client-side Core -->
+<script src="core.js"></script>
+
+<script>
 /* ── Helpers ─────────────────────────────────────────────────────────────── */
 const el  = id => document.getElementById(id);
-const API = async (path, body) => {
-  try {
-    const opts = body
-      ? { method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify(body) }
-      : { method:'GET' };
-    const r = await fetch(path, opts);
-    return r.json();
-  } catch {
-    return { success:false, error:'Network error' };
-  }
-};
 
 function showAlert(id, msg, type='error') {
   const a = el(id);
@@ -759,14 +754,10 @@ let currentBalance = sessionStorage.getItem('g5_balance') || '0';
 
 /* ── Init ────────────────────────────────────────────────────────────────── */
 (async () => {
-  // Guard: if no address in session, try server
-  if (!currentAddress) {
-    const meta = await API('/wallet-meta');
-    if (!meta || !meta.address) {
-      window.location.href = 'index.html';
-      return;
-    }
-    currentAddress = meta.address;
+  // Guard: if no address in session, redirect
+  if (!currentAddress || !Core.hasWallet()) {
+    window.location.href = 'index.html';
+    return;
   }
 
   // Render address
@@ -784,17 +775,18 @@ let currentBalance = sessionStorage.getItem('g5_balance') || '0';
 async function refreshBalance() {
   const btn = el('refresh-btn');
   btn.classList.add('spinning');
-  const res = await API('/balance');
-  btn.classList.remove('spinning');
-
-  if (res.success) {
-    currentBalance = res.balance;
-    sessionStorage.setItem('g5_balance', res.balance);
-    el('dash-balance').textContent = parseFloat(res.balance).toFixed(6);
+  
+  try {
+    const balance = await Core.getBalance(currentAddress);
+    currentBalance = balance;
+    sessionStorage.setItem('g5_balance', balance);
+    el('dash-balance').textContent = parseFloat(balance).toFixed(6);
     renderBalanceTable();
-  } else {
+  } catch (err) {
     // fallback — show session balance
     el('dash-balance').textContent = parseFloat(currentBalance).toFixed(6);
+  } finally {
+    btn.classList.remove('spinning');
   }
 }
 
@@ -829,15 +821,18 @@ async function estimateGasNow() {
   if (!to || !amount) return showAlert('send-alert','Enter address and amount first');
 
   showAlert('send-alert','Estimating gas…','info');
-  const res = await API('/estimate-gas', { to, amount });
-  clearAlert('send-alert');
+  try {
+    const res = await Core.estimateGas(to, amount);
+    clearAlert('send-alert');
 
-  if (!res.success) return showAlert('send-alert', res.error || 'Gas estimation failed');
-
-  el('gp-price').textContent = res.gasPrice;
-  el('gp-limit').textContent = res.gasLimit;
-  el('gp-cost').textContent  = parseFloat(res.gasCostEth).toFixed(8) + ' ETH';
-  el('gas-preview').style.display = 'block';
+    el('gp-price').textContent = res.gasPrice;
+    el('gp-limit').textContent = res.gasLimit;
+    el('gp-cost').textContent  = parseFloat(res.gasCostEth).toFixed(8) + ' ETH';
+    el('gas-preview').style.display = 'block';
+  } catch (err) {
+    clearAlert('send-alert');
+    showAlert('send-alert', err.message || 'Gas estimation failed');
+  }
 }
 
 /* ── Send ────────────────────────────────────────────────────────────────── */
@@ -853,31 +848,35 @@ async function doSend() {
   setBtnLoading('btn-send-now', true);
   showAlert('send-alert','Broadcasting transaction… this may take ~15s','info');
 
-  const res = await API('/send', { to, amount: parseFloat(amount) });
-  setBtnLoading('btn-send-now', false, 'Send');
-  clearAlert('send-alert');
+  try {
+    const res = await Core.sendEth(to, parseFloat(amount));
+    clearAlert('send-alert');
 
-  if (!res.success) return showAlert('send-alert', res.error || 'Send failed');
+    // Show result
+    const sr = el('send-result');
+    el('res-status').textContent  = res.status;
+    el('res-status').className    = `badge ${res.status==='success'?'badge-green':'badge-red'}`;
+    el('res-hash').textContent    = res.txHash;
+    el('res-hash').onclick        = () => openExternal(`https://sepolia.etherscan.io/tx/${res.txHash}`);
+    el('res-from').textContent    = res.from;
+    el('res-to').textContent      = res.to;
+    el('res-amount').textContent  = res.amount + ' ETH';
+    el('res-gas').textContent     = res.gasUsed;
+    el('res-balance').textContent = parseFloat(res.balance).toFixed(6) + ' ETH';
+    sr.classList.add('show');
 
-  // Show result
-  const sr = el('send-result');
-  el('res-status').textContent  = res.status;
-  el('res-status').className    = `badge ${res.status==='success'?'badge-green':'badge-red'}`;
-  el('res-hash').textContent    = res.txHash;
-  el('res-hash').onclick        = () => openExternal(`https://sepolia.etherscan.io/tx/${res.txHash}`);
-  el('res-from').textContent    = res.from;
-  el('res-to').textContent      = res.to;
-  el('res-amount').textContent  = res.amount + ' ETH';
-  el('res-gas').textContent     = res.gasUsed;
-  el('res-balance').textContent = parseFloat(res.balance).toFixed(6) + ' ETH';
-  sr.classList.add('show');
-
-  // Update balance everywhere
-  currentBalance = res.balance;
-  sessionStorage.setItem('g5_balance', res.balance);
-  el('dash-balance').textContent = parseFloat(res.balance).toFixed(6);
-  renderBalanceTable();
-  await loadTxHistory();
+    // Update balance everywhere
+    currentBalance = res.balance;
+    sessionStorage.setItem('g5_balance', res.balance);
+    el('dash-balance').textContent = parseFloat(res.balance).toFixed(6);
+    renderBalanceTable();
+    await loadTxHistory();
+  } catch (err) {
+    clearAlert('send-alert');
+    showAlert('send-alert', err.message || 'Send failed');
+  } finally {
+    setBtnLoading('btn-send-now', false, 'Send');
+  }
 }
 
 /* ── Network Info ────────────────────────────────────────────────────────── */
@@ -888,27 +887,29 @@ async function loadNetworkInfo() {
     <div class="gas-item"><div class="gas-item-label">Chain ID</div><div class="gas-item-value skeleton" style="height:20px;width:60px"></div></div>
     <div class="gas-item"><div class="gas-item-label">Block</div><div class="gas-item-value skeleton" style="height:20px;width:80px"></div></div>
   `;
-  const res = await API('/network');
-  if (!res.success) { showAlert('gas-alert', res.error || 'Failed to load network info'); return; }
-
-  el('gas-grid').innerHTML = `
-    <div class="gas-item">
-      <div class="gas-item-label">Gas Price</div>
-      <div class="gas-item-value">${res.gasPrice}</div>
-    </div>
-    <div class="gas-item">
-      <div class="gas-item-label">Network</div>
-      <div class="gas-item-value">${res.name || 'sepolia'}</div>
-    </div>
-    <div class="gas-item">
-      <div class="gas-item-label">Chain ID</div>
-      <div class="gas-item-value">${res.chainId}</div>
-    </div>
-    <div class="gas-item">
-      <div class="gas-item-label">Latest Block</div>
-      <div class="gas-item-value">#${res.block?.toLocaleString()}</div>
-    </div>
-  `;
+  try {
+    const res = await Core.getNetworkInfo();
+    el('gas-grid').innerHTML = `
+      <div class="gas-item">
+        <div class="gas-item-label">Gas Price</div>
+        <div class="gas-item-value">${res.gasPrice}</div>
+      </div>
+      <div class="gas-item">
+        <div class="gas-item-label">Network</div>
+        <div class="gas-item-value">${res.name || 'sepolia'}</div>
+      </div>
+      <div class="gas-item">
+        <div class="gas-item-label">Chain ID</div>
+        <div class="gas-item-value">${res.chainId}</div>
+      </div>
+      <div class="gas-item">
+        <div class="gas-item-label">Latest Block</div>
+        <div class="gas-item-value">#${res.block?.toLocaleString()}</div>
+      </div>
+    `;
+  } catch (err) {
+    showAlert('gas-alert', err.message || 'Failed to load network info');
+  }
 }
 
 /* ── Tx History ──────────────────────────────────────────────────────────── */
@@ -918,8 +919,7 @@ function showTxHistory() {
 }
 
 async function loadTxHistory() {
-  const res = await API('/tx-history');
-  const txs = res.transactions || [];
+  const txs = Core.getTxHistory();
 
   if (txs.length === 0) {
     el('tx-list').innerHTML = `
@@ -1007,9 +1007,8 @@ function copyAddress() {
 }
 
 /* ── Logout ──────────────────────────────────────────────────────────────── */
-async function doLogout() {
-  await API('/logout', {});
-  sessionStorage.clear();
+function doLogout() {
+  Core.logout();
   window.location.href = 'index.html';
 }
 </script>
