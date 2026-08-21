@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Gear5 — Crypto Wallet</title>
+  <meta name="description" content="Gear5 non-custodial Ethereum wallet. Create or import your wallet securely." />
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png" />
+  <link rel="manifest" href="site.webmanifest" />
+  <link rel="shortcut icon" href="favicon.ico" />
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    /* ── Page-specific layout ───────────────────────────── */
+    .page {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background:
+        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(124,58,237,.12), transparent),
+        radial-gradient(ellipse 60% 40% at 80% 80%, rgba(147,51,234,.08), transparent),
+        var(--bg);
+    }
+
+    .logo-wrap {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 40px;
+    }
+    .logo-icon {
+      width: 52px; height: 52px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 8px 24px rgba(124,58,237,.25);
+    }
+    .logo-icon svg { width: 28px; height: 28px; fill: #fff; }
+    .logo-title { font-size: 2rem; font-weight: 800; }
+
+    .onboard-card {
+      width: min(480px, 96vw);
+    }
+
+    /* ── Tabs ────────────────────────────────────────────── */
+    .tabs {
+      display: flex;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 4px;
+      margin-bottom: 28px;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 10px;
+      background: none;
+      border: none;
+      border-radius: 6px;
+      color: var(--text2);
+      font-family: inherit;
+      font-size: .9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--trans);
+    }
+    .tab-btn.active {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff;
+      box-shadow: 0 2px 10px rgba(124,58,237,.3);
+    }
+
+    .tab-panel { display: none; flex-direction: column; gap: 16px; }
+    .tab-panel.active { display: flex; }
+
+    /* ── Mnemonic display ────────────────────────────────── */
+    .mnemonic-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin: 16px 0;
+    }
+    .mnemonic-word {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 8px 12px;
+      font-family: "JetBrains Mono", monospace;
+      font-size: .8rem;
+      color: var(--text);
+      display: flex;
+      gap: 8px;
+    }
+    .mnemonic-word span:first-child { color: var(--text3); min-width: 16px; }
+
+    .warning-box {
+      background: rgba(245,158,11,.08);
+      border: 1px solid rgba(245,158,11,.25);
+      border-radius: var(--radius-sm);
+      padding: 12px 16px;
+      font-size: .83rem;
+      color: #d97706;
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+    }
+    .warning-box svg { flex-shrink: 0; width: 16px; height: 16px; margin-top: 1px; }
+
+    /* ── Footer ──────────────────────────────────────────── */
+    .footer-note {
+      margin-top: 24px;
+      font-size: .78rem;
+      color: var(--text3);
+      text-align: center;
+    }
+
+    /* ── Password strength ───────────────────────────────── */
+    .strength-bar {
+      height: 3px;
+      border-radius: 99px;
+      background: var(--bg3);
+      margin-top: 6px;
+      overflow: hidden;
+    }
+    .strength-fill {
+      height: 100%;
+      border-radius: 99px;
+      transition: width .3s, background .3s;
+      width: 0;
+    }
+
+    /* ── Label ───────────────────────────────────────────── */
+    .field-label {
+      font-size: .78rem;
+      font-weight: 600;
+      color: var(--text2);
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+      display: block;
+    }
+
+    /* ── Success overlay ─────────────────────────────────── */
+    #success-screen {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      text-align: center;
+    }
+    .success-icon {
+      width: 64px; height: 64px;
+      background: rgba(48,217,160,.12);
+      border: 2px solid var(--success);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .success-icon svg { width: 30px; height: 30px; color: var(--success); }
+  </style>
+</head>
+<body>
+<main class="page">
+
+  <!-- Logo -->
+  <div class="logo-wrap">
+    <div class="logo-icon">
+      <img src="apple-touch-icon.png" alt="Gear5 Logo" class="logo-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" />
+      <svg viewBox="0 0 24 24" style="display:none;"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+    </div>
+    <h1 class="logo-title grad-text">Gear5</h1>
+  </div>
+
+  <!-- Onboard card -->
+  <div class="card onboard-card" id="onboard-card">
+    <p class="muted text-sm" style="margin-bottom:20px;text-align:center">
+      Your non-custodial Ethereum wallet on Sepolia
+    </p>
+
+    <!-- Tabs -->
+    <div class="tabs" role="tablist">
+      <button class="tab-btn active" id="tab-create" onclick="switchTab('create')">Create Wallet</button>
+      <button class="tab-btn"        id="tab-import" onclick="switchTab('import')">Import Wallet</button>
+    </div>
+
+    <!-- ── Create wallet panel ── -->
+    <div class="tab-panel active" id="panel-create">
+      <div>
+        <label class="field-label" for="c-password">Password</label>
+        <input class="input" id="c-password" type="password" placeholder="Min 8 characters" oninput="checkStrength(this)" autocomplete="new-password" />
+        <div class="strength-bar"><div class="strength-fill" id="strength-fill"></div></div>
+      </div>
+      <div>
+        <label class="field-label" for="c-password2">Confirm Password</label>
+        <input class="input" id="c-password2" type="password" placeholder="Re-enter password" autocomplete="new-password" />
+      </div>
+      <div class="warning-box">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+        </svg>
+        <span>Write down your 12-word recovery phrase. It will only be shown once.</span>
+      </div>
+      <button class="btn btn-primary w-full" id="btn-create" onclick="doCreate()">
+        <span>Create New Wallet</span>
+      </button>
+    </div>
+
+    <!-- ── Import wallet panel ── -->
+    <div class="tab-panel" id="panel-import">
+      <div>
+        <label class="field-label" for="i-mnemonic">12-Word Recovery Phrase</label>
+        <textarea class="input" id="i-mnemonic" rows="3" placeholder="word1 word2 word3 … word12" style="resize:vertical;line-height:1.6"></textarea>
+      </div>
+      <div>
+        <label class="field-label" for="i-password">New Password</label>
+        <input class="input" id="i-password" type="password" placeholder="Create a password for this device" autocomplete="new-password" />
+      </div>
+      <button class="btn btn-primary w-full" id="btn-import" onclick="doImport()">
+        <span>Import Wallet</span>
+      </button>
+    </div>
+
+    <!-- Shared alert -->
+    <div class="alert mt-2" id="alert"></div>
+
+    <!-- Mnemonic reveal (after create) -->
+    <div id="mnemonic-reveal" class="hidden">
+      <hr class="divider" />
+      <p class="font-bold" style="margin-bottom:4px">Your Recovery Phrase</p>
+      <p class="muted text-sm" style="margin-bottom:12px">Write these words down in order and keep them safe.</p>
+      <div class="mnemonic-grid" id="mnemonic-grid"></div>
+      <button class="btn btn-primary w-full" id="btn-goto-dash" onclick="gotoDashboard()">
+        I've saved it — Open Dashboard
+      </button>
+    </div>
+  </div>
+
+  <!-- Already have wallet login -->
+  <div style="margin-top:20px;text-align:center">
+    <p class="muted text-sm">Already have a wallet on this device?</p>
+    <button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="showLoginModal()">Unlock Wallet</button>
+  </div>
+
+  <p class="footer-note">Gear5 · Sepolia Testnet · Powered by ethers.js v6</p>
+</main>
+
+<!-- ── Unlock (Login) Modal ── -->
+<div class="modal-backdrop" id="login-modal">
+  <div class="modal">
+    <h2 style="margin-bottom:6px">Unlock Wallet</h2>
+    <p class="muted text-sm" style="margin-bottom:20px">Enter your password to continue</p>
+    <label class="field-label" for="l-password">Password</label>
+    <input class="input" id="l-password" type="password" placeholder="Your wallet password" autocomplete="current-password" />
+    <div class="alert mt-2" id="login-alert"></div>
+    <div style="display:flex;gap:10px;margin-top:20px">
+      <button class="btn btn-ghost w-full" onclick="closeLoginModal()">Cancel</button>
+      <button class="btn btn-primary w-full" id="btn-login" onclick="doLogin()">Unlock</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ── Helpers ─────────────────────────────────────────────────────────────── */
+const el  = id => document.getElementById(id);
+const API = async (path, body) => {
+  const opts = body
+    ? { method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify(body) }
+    : { method:'GET' };
+  const r = await fetch(path, opts);
+  return r.json().catch(() => ({ success:false, error:'Server error' }));
+};
+
+function showAlert(id, msg, type='error') {
+  const a = el(id);
+  a.textContent = msg;
+  a.className = `alert show alert-${type}`;
+}
+function clearAlert(id) {
+  const a = el(id);
+  a.className = 'alert';
+  a.textContent = '';
+}
+
+function setBtnLoading(id, loading, label='') {
+  const b = el(id);
+  if (loading) {
+    b.disabled = true;
+    b.innerHTML = '<div class="spinner"></div>';
+  } else {
+    b.disabled = false;
+    b.innerHTML = `<span>${label}</span>`;
+  }
+}
+
+/* ── Tab switch ──────────────────────────────────────────────────────────── */
+function switchTab(t) {
+  ['create','import'].forEach(x => {
+    el(`tab-${x}`).classList.toggle('active', x===t);
+    el(`panel-${x}`).classList.toggle('active', x===t);
+  });
+  clearAlert('alert');
+}
+
+/* ── Password strength ───────────────────────────────────────────────────── */
+function checkStrength(input) {
+  const v = input.value;
+  let score = 0;
+  if (v.length >= 8)  score++;
+  if (v.length >= 12) score++;
+  if (/[A-Z]/.test(v)) score++;
+  if (/[0-9]/.test(v)) score++;
+  if (/[^A-Za-z0-9]/.test(v)) score++;
+  const colors = ['#f05e6a','#f05e6a','#f5a623','#7c5cfc','#30d9a0'];
+  const pct    = [20,40,60,80,100];
+  const fill   = el('strength-fill');
+  fill.style.width      = pct[score-1]||'0' + '%';
+  fill.style.background = colors[score-1] || 'transparent';
+  if (score > 0) fill.style.width = pct[score-1]+'%';
+}
+
+/* ── Create Wallet ───────────────────────────────────────────────────────── */
+async function doCreate() {
+  clearAlert('alert');
+  const pw  = el('c-password').value;
+  const pw2 = el('c-password2').value;
+  if (!pw)         return showAlert('alert','Enter a password');
+  if (pw.length<8) return showAlert('alert','Password must be at least 8 characters');
+  if (pw !== pw2)  return showAlert('alert','Passwords do not match');
+
+  setBtnLoading('btn-create', true);
+  const res = await API('/create-wallet', { password: pw });
+  setBtnLoading('btn-create', false, 'Create New Wallet');
+
+  if (!res.success) return showAlert('alert', res.error || 'Failed to create wallet');
+
+  // Store address for redirect
+  sessionStorage.setItem('g5_address', res.address);
+  sessionStorage.setItem('g5_balance', res.balance || '0');
+
+  // Show mnemonic
+  renderMnemonic(res.mnemonic);
+  showAlert('alert','Wallet created successfully!','success');
+}
+
+function renderMnemonic(phrase) {
+  const words = phrase.split(' ');
+  el('mnemonic-grid').innerHTML = words.map((w,i) =>
+    `<div class="mnemonic-word"><span>${i+1}.</span><span>${w}</span></div>`
+  ).join('');
+  el('mnemonic-reveal').classList.remove('hidden');
+  el('panel-create').querySelector('button').style.display='none';
+}
+
+/* ── Import Wallet ───────────────────────────────────────────────────────── */
+async function doImport() {
+  clearAlert('alert');
+  const mn = el('i-mnemonic').value.trim();
+  const pw = el('i-password').value;
+
+  if (!mn) return showAlert('alert','Enter your recovery phrase');
+  if (mn.split(/\s+/).length < 12) return showAlert('alert','Recovery phrase must be 12 words');
+  if (!pw) return showAlert('alert','Enter a password');
+
+  setBtnLoading('btn-import', true);
+  const res = await API('/import-wallet', { mnemonic: mn, password: pw });
+  setBtnLoading('btn-import', false, 'Import Wallet');
+
+  if (!res.success) return showAlert('alert', res.error || 'Import failed');
+
+  sessionStorage.setItem('g5_address', res.address);
+  sessionStorage.setItem('g5_balance', res.balance || '0');
+  showAlert('alert','Wallet imported! Redirecting…','success');
+  setTimeout(gotoDashboard, 1200);
+}
+
+/* ── Login / Unlock ──────────────────────────────────────────────────────── */
+function showLoginModal() {
+  el('login-modal').classList.add('open');
+  setTimeout(() => el('l-password').focus(), 200);
+}
+function closeLoginModal() { el('login-modal').classList.remove('open'); }
+
+el('l-password').addEventListener('keydown', e => { if (e.key==='Enter') doLogin(); });
+
+async function doLogin() {
+  clearAlert('login-alert');
+  const pw = el('l-password').value;
+  if (!pw) return showAlert('login-alert','Enter your password');
+
+  setBtnLoading('btn-login', true);
+  const res = await API('/login', { password: pw });
+  setBtnLoading('btn-login', false, 'Unlock');
+
+  if (!res.success) return showAlert('login-alert', res.error || 'Login failed');
+
+  sessionStorage.setItem('g5_address', res.address);
+  sessionStorage.setItem('g5_balance', res.balance || '0');
+  gotoDashboard();
+}
+
+/* ── Navigate to dashboard ───────────────────────────────────────────────── */
+function gotoDashboard() {
+  window.location.href = 'dashboard.html';
+}
+
+/* ── Auto-check existing wallet on load ─────────────────────────────────── */
+(async () => {
+  const meta = await API('/wallet-meta');
+  if (meta && meta.address) {
+    // Wallet file exists — show unlock prompt
+    showLoginModal();
+  }
+})();
+
+// Close modal on backdrop click
+el('login-modal').addEventListener('click', e => {
+  if (e.target === el('login-modal')) closeLoginModal();
+});
+</script>
+</body>
+</html>

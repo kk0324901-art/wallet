@@ -1,12 +1,12 @@
 {
-  "name": "wallet",
+  "name": "gear5-wallet",
   "version": "1.0.0",
-  "type": "commonjs",
-  "main": "wallet.js",
   "scripts": {
-    "start": "node wallet.js"
+    "start": "node server.js",
+    "extract-favicon": "node extract_favicon.js"
   },
   "dependencies": {
-    "ethers": "^6.17.0"
+    "ethers": "^6.17.0",
+    "express": "^5.2.1"
   }
 }

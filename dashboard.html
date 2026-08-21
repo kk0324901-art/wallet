@@ -1,0 +1,1017 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Gear5 — Dashboard</title>
+  <meta name="description" content="Gear5 wallet dashboard — balance, transactions, send & receive on Sepolia." />
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png" />
+  <link rel="manifest" href="site.webmanifest" />
+  <link rel="shortcut icon" href="favicon.ico" />
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    /* ── Dashboard Layout ───────────────────────────────────────── */
+    body { background:
+      radial-gradient(ellipse 70% 40% at 10% 0%, rgba(124,58,237,.1), transparent),
+      radial-gradient(ellipse 50% 40% at 90% 90%, rgba(147,51,234,.06), transparent),
+      var(--bg);
+    }
+
+    .app { display: flex; min-height: 100vh; }
+
+    /* Sidebar */
+    .sidebar {
+      width: 240px;
+      flex-shrink: 0;
+      background: var(--bg2);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      padding: 20px 14px;
+      gap: 4px;
+    }
+    .sidebar-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px 20px;
+    }
+    .sidebar-logo .logo-icon {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 4px 14px rgba(124,58,237,.25);
+    }
+    .sidebar-logo .logo-icon svg { width: 18px; height: 18px; fill: #fff; }
+    .sidebar-logo span { font-weight: 800; font-size: 1.2rem; }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: var(--radius-sm);
+      color: var(--text2);
+      font-size: .87rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: var(--trans);
+      border: none;
+      background: none;
+      width: 100%;
+      text-align: left;
+    }
+    .nav-item svg { width: 18px; height: 18px; flex-shrink: 0; }
+    .nav-item:hover { background: #f1f5f9; color: var(--text); }
+    .nav-item.active {
+      background: #f5f3ff;
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .sidebar-spacer { flex: 1; }
+
+    .sidebar-footer {
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+    }
+
+    /* Main content */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Top bar */
+    .topbar {
+      height: 60px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 28px;
+      background: rgba(255,255,255,.85);
+      backdrop-filter: blur(12px);
+      flex-shrink: 0;
+    }
+    .topbar-title { font-weight: 700; font-size: 1rem; }
+
+    .topbar-right { display: flex; align-items: center; gap: 12px; }
+
+    .addr-chip {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      background: #f5f3ff;
+      border: 1px solid rgba(124,58,237,.18);
+      border-radius: 99px;
+      font-size: .78rem;
+      font-family: "JetBrains Mono", monospace;
+      color: var(--accent);
+      cursor: pointer;
+      transition: var(--trans);
+    }
+    .addr-chip:hover { border-color: var(--accent); background: rgba(124,58,237,.12); }
+    .addr-chip .pulse-dot { width: 6px; height: 6px; }
+
+    /* Content area */
+    .content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* ── Account card (top-left) ────────────────────────────────── */
+    .account-card {
+      background: linear-gradient(135deg, #7c3aed, #6d28d9);
+      border: 1px solid rgba(124,58,237,.3);
+      border-radius: var(--radius-lg);
+      padding: 28px 28px 24px;
+      position: relative;
+      overflow: hidden;
+      color: #ffffff;
+      box-shadow: 0 10px 30px -5px rgba(124,58,237,.3);
+    }
+    .account-card::before {
+      content: '';
+      position: absolute;
+      top: -60px; right: -60px;
+      width: 200px; height: 200px;
+      background: radial-gradient(circle, rgba(255,255,255,.2), transparent 70%);
+      pointer-events: none;
+    }
+
+    .account-label {
+      font-size: .72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: rgba(255,255,255,.8);
+      margin-bottom: 6px;
+    }
+    .account-address {
+      font-family: "JetBrains Mono", monospace;
+      font-size: .88rem;
+      color: rgba(255,255,255,.95);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+    .account-address #dash-address { word-break: break-all; }
+    .account-address .copy-btn { color: rgba(255,255,255,.8); }
+    .account-address .copy-btn:hover { color: #ffffff; }
+
+    .account-balance-label {
+      font-size: .72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: rgba(255,255,255,.8);
+      margin-bottom: 4px;
+    }
+    .account-balance {
+      font-size: 2.4rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1;
+      color: #ffffff;
+    }
+    .account-balance .eth-unit {
+      font-size: 1rem;
+      font-weight: 500;
+      color: rgba(255,255,255,.9);
+      margin-left: 4px;
+    }
+
+    /* ── Action buttons row ─────────────────────────────────────── */
+    .actions-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    /* ── Balance table card ─────────────────────────────────────── */
+    .section-title {
+      font-size: .78rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      color: var(--text3);
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .section-title hr {
+      flex: 1;
+      border: none;
+      border-top: 1px solid var(--border);
+    }
+
+    /* ── Tx row ─────────────────────────────────────────────────── */
+    .tx-icon {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .tx-icon.out { background: rgba(239,68,68,.12); color: var(--danger); }
+    .tx-icon.in  { background: rgba(16,185,129,.12); color: var(--success); }
+    .tx-icon svg { width: 16px; height: 16px; }
+
+    /* ── Gas panel ──────────────────────────────────────────────── */
+    .gas-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 12px;
+    }
+    .gas-item {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px;
+    }
+    .gas-item-label { font-size: .72rem; color: var(--text3); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 4px; }
+    .gas-item-value { font-weight: 700; font-size: .95rem; color: var(--text); }
+
+    /* ── Receive QR-like ────────────────────────────────────────── */
+    .receive-addr {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      font-family: "JetBrains Mono", monospace;
+      font-size: .82rem;
+      color: var(--text);
+      word-break: break-all;
+      text-align: center;
+      line-height: 1.8;
+    }
+
+    /* ── Modal inner specifics ─────────────────────────────────── */
+    .modal h2 { margin-bottom: 6px; font-size: 1.15rem; }
+    .modal-sub { color: var(--text2); font-size: .83rem; margin-bottom: 22px; }
+    .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+    .field-row { display: flex; gap: 10px; }
+    .field-row .input { flex: 1; }
+
+    .tx-result {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px;
+      font-size: .82rem;
+      margin-top: 14px;
+      display: none;
+    }
+    .tx-result.show { display: block; }
+    .tx-result-row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid var(--border); }
+    .tx-result-row:last-child { border-bottom: none; }
+    .tx-result-key { color: var(--text3); font-size: .75rem; text-transform: uppercase; letter-spacing: .05em; }
+    .tx-result-val { font-family: "JetBrains Mono", monospace; font-size: .8rem; color: var(--text); max-width: 260px; overflow: hidden; text-overflow: ellipsis; }
+
+    /* Empty state */
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text3);
+    }
+    .empty-state svg { width: 40px; height: 40px; margin-bottom: 12px; opacity: .4; }
+
+    /* Swap / Buy notice */
+    .notice-box {
+      background: #f5f3ff;
+      border: 1px solid rgba(124,58,237,.2);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      font-size: .85rem;
+      color: var(--accent);
+      text-align: center;
+      margin-top: 8px;
+    }
+
+    /* Refresh spin */
+    .refresh-btn {
+      background: none; border: none; cursor: pointer;
+      color: var(--text3); padding: 4px;
+      border-radius: 4px; transition: var(--trans);
+    }
+    .refresh-btn:hover { color: var(--accent); }
+    .refresh-btn.spinning svg { animation: spin .7s linear infinite; }
+
+    @media (max-width: 700px) {
+      .sidebar { display: none; }
+      .content { padding: 16px; }
+      .account-balance { font-size: 1.8rem; }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ── Sidebar ─────────────────────────────────────────────────── -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">
+        <img src="apple-touch-icon.png" alt="Gear5 Logo" class="logo-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" />
+        <svg viewBox="0 0 24 24" style="display:none;"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+      </div>
+      <span class="grad-text">Gear5</span>
+    </div>
+
+    <button class="nav-item active" onclick="setNav(this,'overview')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+        <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+      </svg>
+      Overview
+    </button>
+
+    <button class="nav-item" onclick="openModal('send-modal');setNav(this,'send')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+      </svg>
+      Send
+    </button>
+
+    <button class="nav-item" onclick="openModal('receive-modal');setNav(this,'receive')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="8 17 12 21 16 17"/><line x1="12" y1="3" x2="12" y2="21"/>
+      </svg>
+      Receive
+    </button>
+
+    <button class="nav-item" onclick="openModal('swap-modal');setNav(this,'swap')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/>
+        <polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/>
+      </svg>
+      Swap
+    </button>
+
+    <button class="nav-item" onclick="openModal('buy-modal');setNav(this,'buy')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="2" y="5" width="20" height="14" rx="2"/>
+        <line x1="2" y1="10" x2="22" y2="10"/>
+      </svg>
+      Buy
+    </button>
+
+    <button class="nav-item" onclick="showTxHistory();setNav(this,'history')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+      </svg>
+      History
+    </button>
+
+    <button class="nav-item" onclick="openModal('gas-modal');setNav(this,'gas')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/>
+        <line x1="9" y1="15" x2="15" y2="15"/>
+      </svg>
+      Gas Tracker
+    </button>
+
+    <div class="sidebar-spacer"></div>
+
+    <div class="sidebar-footer">
+      <button class="nav-item" onclick="doLogout()" style="color:var(--danger)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
+          <polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+        </svg>
+        Lock Wallet
+      </button>
+    </div>
+  </aside>
+
+  <!-- ── Main ───────────────────────────────────────────────────── -->
+  <div class="main">
+
+    <!-- Top bar -->
+    <div class="topbar">
+      <span class="topbar-title" id="topbar-title">Overview</span>
+      <div class="topbar-right">
+        <div class="network-pill">
+          <span class="pulse-dot"></span>
+          Sepolia Testnet
+        </div>
+        <div class="addr-chip" onclick="copyAddress()" title="Copy address">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <circle cx="12" cy="12" r="10"/>
+          </svg>
+          <span id="topbar-addr">Loading…</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Content -->
+    <div class="content">
+
+      <!-- ── Account Card ──────────────────────────────────────── -->
+      <div class="account-card">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start">
+          <div>
+            <div class="account-label">Account Address</div>
+            <div class="account-address">
+              <span id="dash-address">Loading…</span>
+              <button class="copy-btn" onclick="copyAddress()" title="Copy">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+                </svg>
+              </button>
+            </div>
+            <div class="account-balance-label">Current Balance</div>
+            <div class="account-balance">
+              <span id="dash-balance"><span class="skeleton" style="width:120px;height:36px"></span></span>
+              <span class="eth-unit">ETH</span>
+            </div>
+          </div>
+          <button class="refresh-btn" id="refresh-btn" onclick="refreshBalance()" title="Refresh balance">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="23 4 23 10 17 10"/>
+              <path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- ── Action Buttons ────────────────────────────────────── -->
+      <div class="actions-row">
+        <button class="btn btn-action" id="act-send" onclick="openModal('send-modal')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+          </svg>
+          Send
+        </button>
+        <button class="btn btn-action" id="act-receive" onclick="openModal('receive-modal')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="8 17 12 21 16 17"/><line x1="12" y1="3" x2="12" y2="21"/>
+          </svg>
+          Receive
+        </button>
+        <button class="btn btn-action" id="act-swap" onclick="openModal('swap-modal')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/>
+            <polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/>
+          </svg>
+          Swap
+        </button>
+        <button class="btn btn-action" id="act-buy" onclick="openModal('buy-modal')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/>
+          </svg>
+          Buy
+        </button>
+        <button class="btn btn-action" id="act-gas" onclick="openModal('gas-modal')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 22V6l9-4 9 4v16"/><path d="M12 22v-5"/><rect x="9" y="12" width="6" height="5"/>
+          </svg>
+          Gas
+        </button>
+        <button class="btn btn-action" id="act-history" onclick="showTxHistory()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+          </svg>
+          Tx Hash
+        </button>
+      </div>
+
+      <!-- ── Balance Table ─────────────────────────────────────── -->
+      <div class="card" style="padding:20px">
+        <div class="section-title">
+          Asset Balances
+          <hr />
+          <span class="badge badge-purple">Sepolia</span>
+        </div>
+        <table class="table" id="balance-table">
+          <thead>
+            <tr>
+              <th>Asset</th>
+              <th>Network</th>
+              <th>Balance</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="balance-tbody">
+            <tr>
+              <td colspan="4">
+                <div style="display:flex;align-items:center;gap:10px;padding:4px 0">
+                  <span class="skeleton" style="width:28px;height:28px;border-radius:50%"></span>
+                  <span class="skeleton" style="width:180px;height:16px"></span>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- ── Transaction History ───────────────────────────────── -->
+      <div class="card" style="padding:20px" id="tx-section">
+        <div class="section-title" style="justify-content:space-between">
+          <span>Recent Transactions</span>
+          <button class="btn btn-ghost btn-sm" onclick="loadTxHistory()">Refresh</button>
+        </div>
+        <div id="tx-list">
+          <div class="empty-state">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+            </svg>
+            <p>No transactions yet</p>
+            <p class="text-xs" style="margin-top:4px">Your transaction history will appear here</p>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /content -->
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<!-- ══════════════════════════════════════════════════════════════
+     MODALS
+══════════════════════════════════════════════════════════════ -->
+
+<!-- ── Send Modal ─────────────────────────────────────────────── -->
+<div class="modal-backdrop" id="send-modal">
+  <div class="modal">
+    <h2>Send ETH</h2>
+    <p class="modal-sub">Transfer ETH to another address on Sepolia</p>
+
+    <div class="field">
+      <label class="field-label" for="send-to">Recipient Address</label>
+      <input class="input" id="send-to" placeholder="0x…" />
+    </div>
+    <div class="field">
+      <label class="field-label" for="send-amount">Amount (ETH)</label>
+      <div class="field-row">
+        <input class="input" id="send-amount" type="number" step="0.0001" placeholder="0.001" />
+        <button class="btn btn-ghost btn-sm" onclick="estimateGasNow()" style="white-space:nowrap">Est. Gas</button>
+      </div>
+    </div>
+
+    <div class="alert" id="send-alert"></div>
+
+    <!-- Gas estimate preview -->
+    <div id="gas-preview" style="display:none;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;margin-bottom:14px;font-size:.82rem">
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+        <span class="muted">Gas Price</span><span id="gp-price" class="font-bold"></span>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+        <span class="muted">Gas Limit</span><span id="gp-limit" class="font-bold"></span>
+      </div>
+      <div style="display:flex;justify-content:space-between">
+        <span class="muted">Estimated Fee</span><span id="gp-cost" class="font-bold" style="color:var(--accent)"></span>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-ghost w-full" onclick="closeModal('send-modal')">Cancel</button>
+      <button class="btn btn-primary w-full" id="btn-send-now" onclick="doSend()">
+        Send
+      </button>
+    </div>
+
+    <!-- Result -->
+    <div class="tx-result" id="send-result">
+      <div class="tx-result-row">
+        <span class="tx-result-key">Status</span>
+        <span class="tx-result-val"><span class="badge badge-green" id="res-status">success</span></span>
+      </div>
+      <div class="tx-result-row">
+        <span class="tx-result-key">Tx Hash</span>
+        <span class="tx-result-val" id="res-hash" style="cursor:pointer" title="Click to view on Etherscan"></span>
+      </div>
+      <div class="tx-result-row">
+        <span class="tx-result-key">From</span>
+        <span class="tx-result-val" id="res-from"></span>
+      </div>
+      <div class="tx-result-row">
+        <span class="tx-result-key">To</span>
+        <span class="tx-result-val" id="res-to"></span>
+      </div>
+      <div class="tx-result-row">
+        <span class="tx-result-key">Amount</span>
+        <span class="tx-result-val" id="res-amount"></span>
+      </div>
+      <div class="tx-result-row">
+        <span class="tx-result-key">Gas Used</span>
+        <span class="tx-result-val" id="res-gas"></span>
+      </div>
+      <div class="tx-result-row">
+        <span class="tx-result-key">New Balance</span>
+        <span class="tx-result-val" id="res-balance"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Receive Modal ───────────────────────────────────────────── -->
+<div class="modal-backdrop" id="receive-modal">
+  <div class="modal">
+    <h2>Receive ETH</h2>
+    <p class="modal-sub">Share your address to receive ETH on Sepolia</p>
+    <div class="receive-addr" id="receive-address">—</div>
+    <div style="display:flex;gap:10px;margin-top:16px">
+      <button class="btn btn-ghost w-full" onclick="copyAddress();showAlert('receive-alert','Address copied!','success')">Copy Address</button>
+      <button class="btn btn-primary w-full" onclick="closeModal('receive-modal')">Done</button>
+    </div>
+    <div class="alert mt-2" id="receive-alert"></div>
+  </div>
+</div>
+
+<!-- ── Swap Modal ──────────────────────────────────────────────── -->
+<div class="modal-backdrop" id="swap-modal">
+  <div class="modal">
+    <h2>Swap</h2>
+    <p class="modal-sub">Token swaps on Sepolia testnet</p>
+    <div class="notice-box">
+      🔄 Swap functionality requires a DEX integration (e.g. Uniswap).<br/>
+      On Sepolia, use the <strong>Uniswap Sepolia</strong> interface.<br/>
+      <a href="https://app.uniswap.org/" target="_blank" rel="noopener noreferrer" onclick="openExternal(this.href); return false;" style="color:var(--accent);text-decoration:none;font-weight:600">Open Uniswap ↗</a>
+    </div>
+    <button class="btn btn-ghost w-full" style="margin-top:20px" onclick="closeModal('swap-modal')">Close</button>
+  </div>
+</div>
+
+<!-- ── Buy Modal ───────────────────────────────────────────────── -->
+<div class="modal-backdrop" id="buy-modal">
+  <div class="modal">
+    <h2>Get Sepolia ETH</h2>
+    <p class="modal-sub">Use a faucet to get free testnet ETH</p>
+    <div class="notice-box">
+      🚰 Sepolia is a testnet — use a faucet to get free ETH for testing.<br/>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:12px">
+        <a href="https://sepoliafaucet.com" target="_blank" rel="noopener noreferrer" onclick="openExternal(this.href); return false;" style="color:var(--accent);text-decoration:none;font-weight:600">Alchemy Sepolia Faucet ↗</a>
+        <a href="https://faucet.quicknode.com/ethereum/sepolia" target="_blank" rel="noopener noreferrer" onclick="openExternal(this.href); return false;" style="color:var(--accent);text-decoration:none;font-weight:600">QuickNode Sepolia Faucet ↗</a>
+        <a href="https://www.infura.io/faucet/sepolia" target="_blank" rel="noopener noreferrer" onclick="openExternal(this.href); return false;" style="color:var(--accent);font-weight:600;text-decoration:none">Infura Sepolia Faucet ↗</a>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:20px">
+      <button class="btn btn-ghost w-full" onclick="closeModal('buy-modal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Gas Tracker Modal ───────────────────────────────────────── -->
+<div class="modal-backdrop" id="gas-modal">
+  <div class="modal">
+    <h2>Gas Tracker</h2>
+    <p class="modal-sub">Live network fee data from Sepolia</p>
+    <div class="gas-grid" id="gas-grid">
+      <div class="gas-item"><div class="gas-item-label">Gas Price</div><div class="gas-item-value skeleton" style="height:20px;width:80px"></div></div>
+      <div class="gas-item"><div class="gas-item-label">Max Fee</div><div class="gas-item-value skeleton" style="height:20px;width:80px"></div></div>
+      <div class="gas-item"><div class="gas-item-label">Chain ID</div><div class="gas-item-value skeleton" style="height:20px;width:60px"></div></div>
+      <div class="gas-item"><div class="gas-item-label">Block</div><div class="gas-item-value skeleton" style="height:20px;width:80px"></div></div>
+    </div>
+    <div class="alert mt-2" id="gas-alert"></div>
+    <div style="display:flex;gap:10px;margin-top:20px">
+      <button class="btn btn-ghost w-full" onclick="loadNetworkInfo()">Refresh</button>
+      <button class="btn btn-primary w-full" onclick="closeModal('gas-modal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Tx Hash Detail Modal ────────────────────────────────────── -->
+<div class="modal-backdrop" id="txhash-modal">
+  <div class="modal">
+    <h2>Transaction Detail</h2>
+    <p class="modal-sub">Full details of the selected transaction</p>
+    <div id="txhash-body" style="display:flex;flex-direction:column;gap:0"></div>
+    <button class="btn btn-ghost w-full" style="margin-top:20px" onclick="closeModal('txhash-modal')">Close</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     SCRIPTS
+══════════════════════════════════════════════════════════════ -->
+<script>
+/* ── Helpers ─────────────────────────────────────────────────────────────── */
+const el  = id => document.getElementById(id);
+const API = async (path, body) => {
+  try {
+    const opts = body
+      ? { method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify(body) }
+      : { method:'GET' };
+    const r = await fetch(path, opts);
+    return r.json();
+  } catch {
+    return { success:false, error:'Network error' };
+  }
+};
+
+function showAlert(id, msg, type='error') {
+  const a = el(id);
+  if (!a) return;
+  a.textContent = msg;
+  a.className = `alert show alert-${type}`;
+}
+function clearAlert(id) {
+  const a = el(id); if (!a) return;
+  a.className = 'alert'; a.textContent = '';
+}
+
+function setBtnLoading(id, loading, label='') {
+  const b = el(id); if (!b) return;
+  b.disabled = loading;
+  b.innerHTML = loading ? '<div class="spinner"></div>' : label;
+}
+
+function shortAddr(addr) {
+  if (!addr) return '—';
+  return addr.slice(0,6) + '…' + addr.slice(-4);
+}
+
+/* ── Modal ────────────────────────────────────────────────────────────────── */
+function openModal(id) {
+  el(id).classList.add('open');
+  if (id === 'gas-modal') loadNetworkInfo();
+  if (id === 'receive-modal') el('receive-address').textContent = currentAddress || '—';
+}
+function closeModal(id) { el(id).classList.remove('open'); }
+
+// Close on backdrop click
+document.querySelectorAll('.modal-backdrop').forEach(bd => {
+  bd.addEventListener('click', e => { if (e.target === bd) bd.classList.remove('open'); });
+});
+
+/* ── Nav ─────────────────────────────────────────────────────────────────── */
+function setNav(btn, title) {
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  el('topbar-title').textContent = title.charAt(0).toUpperCase() + title.slice(1);
+}
+
+/* ── State ───────────────────────────────────────────────────────────────── */
+let currentAddress = sessionStorage.getItem('g5_address') || '';
+let currentBalance = sessionStorage.getItem('g5_balance') || '0';
+
+/* ── Init ────────────────────────────────────────────────────────────────── */
+(async () => {
+  // Guard: if no address in session, try server
+  if (!currentAddress) {
+    const meta = await API('/wallet-meta');
+    if (!meta || !meta.address) {
+      window.location.href = 'index.html';
+      return;
+    }
+    currentAddress = meta.address;
+  }
+
+  // Render address
+  el('dash-address').textContent  = currentAddress;
+  el('topbar-addr').textContent   = shortAddr(currentAddress);
+
+  // Show cached balance, then refresh live
+  el('dash-balance').textContent = parseFloat(currentBalance).toFixed(6);
+  await refreshBalance();
+  await loadTxHistory();
+  renderBalanceTable();
+})();
+
+/* ── Balance ─────────────────────────────────────────────────────────────── */
+async function refreshBalance() {
+  const btn = el('refresh-btn');
+  btn.classList.add('spinning');
+  const res = await API('/balance');
+  btn.classList.remove('spinning');
+
+  if (res.success) {
+    currentBalance = res.balance;
+    sessionStorage.setItem('g5_balance', res.balance);
+    el('dash-balance').textContent = parseFloat(res.balance).toFixed(6);
+    renderBalanceTable();
+  } else {
+    // fallback — show session balance
+    el('dash-balance').textContent = parseFloat(currentBalance).toFixed(6);
+  }
+}
+
+function renderBalanceTable() {
+  el('balance-tbody').innerHTML = `
+    <tr>
+      <td>
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.75rem;color:#fff">Ξ</div>
+          <div>
+            <div class="font-bold" style="font-size:.9rem">Ethereum</div>
+            <div class="text-xs muted">ETH</div>
+          </div>
+        </div>
+      </td>
+      <td><span class="badge badge-purple">Sepolia</span></td>
+      <td>
+        <div class="font-bold" style="font-size:.95rem">${parseFloat(currentBalance).toFixed(6)}</div>
+        <div class="text-xs muted">ETH</div>
+      </td>
+      <td><span class="badge badge-green">● Live</span></td>
+    </tr>
+  `;
+}
+
+/* ── Gas Estimation ──────────────────────────────────────────────────────── */
+async function estimateGasNow() {
+  const to     = el('send-to').value.trim();
+  const amount = el('send-amount').value.trim();
+  clearAlert('send-alert');
+
+  if (!to || !amount) return showAlert('send-alert','Enter address and amount first');
+
+  showAlert('send-alert','Estimating gas…','info');
+  const res = await API('/estimate-gas', { to, amount });
+  clearAlert('send-alert');
+
+  if (!res.success) return showAlert('send-alert', res.error || 'Gas estimation failed');
+
+  el('gp-price').textContent = res.gasPrice;
+  el('gp-limit').textContent = res.gasLimit;
+  el('gp-cost').textContent  = parseFloat(res.gasCostEth).toFixed(8) + ' ETH';
+  el('gas-preview').style.display = 'block';
+}
+
+/* ── Send ────────────────────────────────────────────────────────────────── */
+async function doSend() {
+  clearAlert('send-alert');
+  const to     = el('send-to').value.trim();
+  const amount = el('send-amount').value.trim();
+
+  if (!to)     return showAlert('send-alert','Enter recipient address');
+  if (!amount || isNaN(amount) || parseFloat(amount) <= 0)
+               return showAlert('send-alert','Enter a valid amount');
+
+  setBtnLoading('btn-send-now', true);
+  showAlert('send-alert','Broadcasting transaction… this may take ~15s','info');
+
+  const res = await API('/send', { to, amount: parseFloat(amount) });
+  setBtnLoading('btn-send-now', false, 'Send');
+  clearAlert('send-alert');
+
+  if (!res.success) return showAlert('send-alert', res.error || 'Send failed');
+
+  // Show result
+  const sr = el('send-result');
+  el('res-status').textContent  = res.status;
+  el('res-status').className    = `badge ${res.status==='success'?'badge-green':'badge-red'}`;
+  el('res-hash').textContent    = res.txHash;
+  el('res-hash').onclick        = () => openExternal(`https://sepolia.etherscan.io/tx/${res.txHash}`);
+  el('res-from').textContent    = res.from;
+  el('res-to').textContent      = res.to;
+  el('res-amount').textContent  = res.amount + ' ETH';
+  el('res-gas').textContent     = res.gasUsed;
+  el('res-balance').textContent = parseFloat(res.balance).toFixed(6) + ' ETH';
+  sr.classList.add('show');
+
+  // Update balance everywhere
+  currentBalance = res.balance;
+  sessionStorage.setItem('g5_balance', res.balance);
+  el('dash-balance').textContent = parseFloat(res.balance).toFixed(6);
+  renderBalanceTable();
+  await loadTxHistory();
+}
+
+/* ── Network Info ────────────────────────────────────────────────────────── */
+async function loadNetworkInfo() {
+  el('gas-grid').innerHTML = `
+    <div class="gas-item"><div class="gas-item-label">Gas Price</div><div class="gas-item-value skeleton" style="height:20px;width:80px"></div></div>
+    <div class="gas-item"><div class="gas-item-label">Max Fee</div><div class="gas-item-value skeleton" style="height:20px;width:80px"></div></div>
+    <div class="gas-item"><div class="gas-item-label">Chain ID</div><div class="gas-item-value skeleton" style="height:20px;width:60px"></div></div>
+    <div class="gas-item"><div class="gas-item-label">Block</div><div class="gas-item-value skeleton" style="height:20px;width:80px"></div></div>
+  `;
+  const res = await API('/network');
+  if (!res.success) { showAlert('gas-alert', res.error || 'Failed to load network info'); return; }
+
+  el('gas-grid').innerHTML = `
+    <div class="gas-item">
+      <div class="gas-item-label">Gas Price</div>
+      <div class="gas-item-value">${res.gasPrice}</div>
+    </div>
+    <div class="gas-item">
+      <div class="gas-item-label">Network</div>
+      <div class="gas-item-value">${res.name || 'sepolia'}</div>
+    </div>
+    <div class="gas-item">
+      <div class="gas-item-label">Chain ID</div>
+      <div class="gas-item-value">${res.chainId}</div>
+    </div>
+    <div class="gas-item">
+      <div class="gas-item-label">Latest Block</div>
+      <div class="gas-item-value">#${res.block?.toLocaleString()}</div>
+    </div>
+  `;
+}
+
+/* ── Tx History ──────────────────────────────────────────────────────────── */
+function showTxHistory() {
+  el('tx-section').scrollIntoView({ behavior:'smooth' });
+  loadTxHistory();
+}
+
+async function loadTxHistory() {
+  const res = await API('/tx-history');
+  const txs = res.transactions || [];
+
+  if (txs.length === 0) {
+    el('tx-list').innerHTML = `
+      <div class="empty-state">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+        </svg>
+        <p>No transactions yet</p>
+        <p class="text-xs" style="margin-top:4px">Your transaction history will appear here</p>
+      </div>`;
+    return;
+  }
+
+  el('tx-list').innerHTML = txs.map((tx, i) => `
+    <div style="display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid var(--border);cursor:pointer"
+         onclick="showTxDetail(${i})" title="View details">
+      <div class="tx-icon out">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+        </svg>
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span class="font-bold" style="font-size:.88rem">Sent ETH</span>
+          <span class="font-bold" style="color:var(--danger)">-${tx.amount} ETH</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:3px">
+          <span class="text-xs muted mono">→ ${shortAddr(tx.to)}</span>
+          <span class="text-xs muted">${new Date(tx.timestamp).toLocaleString()}</span>
+        </div>
+        <div class="text-xs" style="color:var(--text3);margin-top:2px;font-family:'JetBrains Mono',monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+          ${tx.txHash}
+        </div>
+      </div>
+      <span class="badge ${tx.status==='success'?'badge-green':'badge-red'}">${tx.status}</span>
+    </div>
+  `).join('');
+
+  // Store for detail view
+  window._txList = txs;
+}
+
+function openExternal(url) {
+  if (!url) return;
+  if (window.open) {
+    window.open(url, '_blank', 'noopener,noreferrer');
+  } else {
+    window.location.href = url;
+  }
+}
+
+function showTxDetail(index) {
+  const tx = window._txList[index];
+  if (!tx) return;
+  el('txhash-body').innerHTML = Object.entries({
+    'Tx Hash':    tx.txHash,
+    'Status':     tx.status,
+    'From':       tx.from,
+    'To':         tx.to,
+    'Amount':     tx.amount + ' ETH',
+    'Gas Used':   tx.gasUsed,
+    'Balance After': parseFloat(tx.balance).toFixed(6) + ' ETH',
+    'Network':    tx.network,
+    'Timestamp':  new Date(tx.timestamp).toLocaleString(),
+  }).map(([k,v]) => `
+    <div class="tx-result-row">
+      <span class="tx-result-key">${k}</span>
+      <span class="tx-result-val">${k==='Tx Hash'
+        ? `<a href="https://sepolia.etherscan.io/tx/${v}" target="_blank" rel="noopener noreferrer" onclick="openExternal(this.href); return false;" style="color:var(--accent);text-decoration:none">${v.slice(0,18)}…</a>`
+        : v}
+      </span>
+    </div>
+  `).join('');
+  openModal('txhash-modal');
+}
+
+/* ── Copy address ────────────────────────────────────────────────────────── */
+function copyAddress() {
+  if (!currentAddress) return;
+  navigator.clipboard.writeText(currentAddress).catch(() => {});
+  const chip = el('topbar-addr');
+  const prev = chip.textContent;
+  chip.textContent = 'Copied!';
+  setTimeout(() => { chip.textContent = prev; }, 1500);
+}
+
+/* ── Logout ──────────────────────────────────────────────────────────────── */
+async function doLogout() {
+  await API('/logout', {});
+  sessionStorage.clear();
+  window.location.href = 'index.html';
+}
+</script>
+</body>
+</html>

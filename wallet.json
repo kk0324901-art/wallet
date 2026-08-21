@@ -1,6 +1,18 @@
 {
-  "address": "0x853866Fe80C879B6414B1e1468aeBf91f07eeB99",
-  "privateKey": "0xce6f327bfeed9393635a7bb4ffce76fee0d465356aeb7f9bad12d055165aa4d4",
-  "mnemonic": "diet bleak caution warfare monkey seminar whale coast bottom own wet agree",
-  "createdAt": "2026-08-08T10:28:42.548Z"
+  "address": "0x117779872D7af46167B7B152A660398Faff00b5f",
+  "publicKey": "0x04742109e80b371f630436e052dbb91a8f654bd7614313e4bf83c75f3f358a6b8ab18c65ec409d18edc61f5319af72739c83916eb7bfe7de5e2c141b2788ebda31",
+  "encrypted": {
+    "salt": "ccf7a6ca0587b6979bc4ebb10845f191",
+    "iv": "8f5ababc3009f5b149463c15",
+    "tag": "673e44e44d2b45b248aa8098f7ac83d2",
+    "data": "1ecd463ef62f5c885bfe83cf9b417acbb09111552f5fae0a35e8ca06908fa2f271cf1b3af98940cfad43c15c303f3540516ce6586973ee619d73e0183b48d1162f84"
+  },
+  "mnemEncrypted": {
+    "salt": "6f027384d1a4bdd994029c7b41f7c79e",
+    "iv": "fd5bd960ce9c091755c69885",
+    "tag": "7d9829ec9d25478cb2135999c6302bd8",
+    "data": "a994c636e83ca719229cb07ec32260140aca2d5c297c26da86ca45bce64faed7f3f81c62cff7038f049cb26b63392f07a4762e883df893b43eb50c27d552ff814c7d2fbc09f3bd61f29c9ec2c2"
+  },
+  "createdAt": "2026-08-21T07:55:34.171Z",
+  "network": "sepolia"
 }
